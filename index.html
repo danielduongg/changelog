@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Changelog — version control for your life</title>
+<meta name="description" content="Snapshot your life now and then. Diff any two moments like a git changelog and watch how you actually changed."/>
+<style>
+  :root{
+    --bg:#0a0c11; --card:#13161e; --card2:#1a1e29; --line:#262b38;
+    --ink:#eef2fb; --dim:#9aa4bd; --faint:#646e87;
+    --accent:#7aa2ff; --accent2:#9d8cff;
+    --add:#5cd6a0; --del:#ff6f87; --chg:#ffc15e; --done:#5cd6a0;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--line);
+    background:var(--card2);color:var(--ink);border-radius:11px;padding:11px 18px;transition:.15s}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.brand{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0d16;border:none}
+  .btn.lg{padding:14px 22px;font-size:15px}
+  .muted{color:var(--dim)}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:rgba(10,12,17,.7);border-bottom:1px solid var(--line)}
+  nav .row{display:flex;align-items:center;gap:12px;padding:13px 0}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+  .logo .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;place-items:center;color:#0a0d16;font-weight:900;font-family:var(--mono);font-size:17px}
+  nav .sp{flex:1}
+  nav a.lnk{font-size:13.5px;color:var(--dim);padding:6px 10px}
+  nav a.lnk:hover{color:var(--ink)}
+  @media(max-width:680px){nav a.lnk{display:none}}
+
+  /* hero */
+  .hero{position:relative;text-align:center;padding:74px 0 48px;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:-40% 0 auto 0;height:560px;z-index:-1;
+    background:radial-gradient(620px 300px at 50% 0,rgba(122,162,255,.20),transparent 70%),radial-gradient(520px 260px at 80% 30%,rgba(157,140,255,.16),transparent 70%)}
+  .tagpill{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--accent2);border:1px solid rgba(157,140,255,.4);
+    background:rgba(157,140,255,.08);border-radius:999px;padding:6px 13px;margin-bottom:22px}
+  .hero h1{font-size:52px;line-height:1.04;letter-spacing:-.03em;margin:0 0 16px;font-weight:850}
+  .hero h1 .grad{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  @media(max-width:680px){.hero h1{font-size:36px}}
+  .hero p.lede{font-size:18px;color:var(--dim);max-width:620px;margin:0 auto 28px}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .subnote{margin-top:14px;font-size:12.5px;color:var(--faint)}
+
+  section{padding:54px 0;border-top:1px solid var(--line)}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:10px}
+  h2.sec{font-size:30px;letter-spacing:-.02em;margin:0 0 10px;font-weight:800}
+  .sec-lede{color:var(--dim);max-width:640px;margin:0 0 26px;font-size:15.5px}
+  .center{text-align:center}
+  .center .sec-lede{margin-left:auto;margin-right:auto}
+
+  /* the reveal diff */
+  .reveal{display:grid;grid-template-columns:1fr 1.05fr;gap:22px;align-items:center}
+  @media(max-width:840px){.reveal{grid-template-columns:1fr}}
+  .snapcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .snapcard .when{font-family:var(--mono);font-size:12px;color:var(--faint)}
+  .snapcard .hl{font-size:18px;font-weight:700;margin:3px 0 12px}
+  .kv{display:flex;gap:8px;font-size:13.5px;padding:5px 0;border-top:1px dashed var(--line)}
+  .kv .k{color:var(--faint);width:96px;flex:none}
+  .twin{display:grid;gap:12px}
+  .diffbox{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-family:var(--mono)}
+  .diffbox .top{display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);font-size:12px;color:var(--dim)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .diffline{display:flex;gap:10px;padding:5px 15px;font-size:13px;align-items:baseline}
+  .diffline .g{width:12px;flex:none;font-weight:800;text-align:center}
+  .g.a{color:var(--add)} .g.d{color:var(--del)} .g.c{color:var(--chg)} .g.k{color:var(--done)}
+  .lab{color:var(--faint);min-width:104px;flex:none}
+  @media(max-width:520px){.lab{min-width:80px}}
+  .o{color:var(--del);text-decoration:line-through;opacity:.85}
+  .n{color:var(--add)} .arr{color:var(--faint)}
+  .up{color:var(--add);font-weight:700}
+  .summ{padding:10px 15px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+
+  /* narrative showcase */
+  .narr{margin-top:22px;background:linear-gradient(180deg,rgba(157,140,255,.10),rgba(122,162,255,.04));
+    border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:12px;padding:18px 20px;max-width:760px}
+  .narr .tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);font-weight:700;margin-bottom:8px}
+  .narr p{margin:0;font-size:15px;line-height:1.65;color:#dde3f0}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:var(--mono);font-size:13px;color:var(--accent);border:1px solid var(--line);border-radius:8px;width:30px;height:30px;display:grid;place-items:center;margin-bottom:12px}
+  .step h3{margin:0 0 6px;font-size:16px}
+  .step p{margin:0;color:var(--dim);font-size:13.5px}
+
+  /* features */
+  .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:760px){.feat{grid-template-columns:1fr}}
+  .fcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .fcard .ic{font-size:22px;margin-bottom:8px}
+  .fcard h3{margin:0 0 5px;font-size:15px}
+  .fcard p{margin:0;color:var(--dim);font-size:13px}
+
+  /* moat */
+  .moat{background:linear-gradient(135deg,rgba(122,162,255,.10),rgba(157,140,255,.06));border:1px solid var(--line);border-radius:18px;padding:30px 26px;text-align:center}
+  .moat h2{font-size:26px;margin:0 0 10px;letter-spacing:-.02em}
+  .moat p{color:var(--dim);max-width:640px;margin:0 auto;font-size:15px}
+
+  /* pricing */
+  .tiers{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:760px;margin:0 auto}
+  @media(max-width:620px){.tiers{grid-template-columns:1fr}}
+  .tier{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:12px}
+  .tier.feat2{border-color:var(--accent2);box-shadow:0 0 0 1px var(--accent2) inset}
+  .tier .badge{font-size:10.5px;font-weight:700;color:var(--accent2);letter-spacing:.1em;text-transform:uppercase}
+  .tier .nm{font-weight:700;font-size:17px}
+  .tier .pr{font-size:38px;font-weight:850;letter-spacing:-.02em}
+  .tier .pr small{font-size:14px;color:var(--dim);font-weight:500}
+  .tier .yr{font-size:12.5px;color:var(--faint)}
+  .tier ul{margin:6px 0 0;padding-left:20px;color:var(--dim);font-size:13.5px;display:flex;flex-direction:column;gap:7px}
+  .tier ul li::marker{color:var(--accent2)}
+
+  /* final + footer */
+  .final{text-align:center}
+  .final h2{font-size:34px;letter-spacing:-.02em;margin:0 0 14px}
+  footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--faint);font-size:12.5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  footer .sp{flex:1}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap row">
+    <div class="logo"><span class="mark">⌥</span> Changelog</div>
+    <span class="sp"></span>
+    <a class="lnk" href="#how">How it works</a>
+    <a class="lnk" href="#features">Features</a>
+    <a class="lnk" href="#pricing">Pricing</a>
+    <a class="btn" href="./changelog.html">Launch demo →</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tagpill">⌥ git diff — for your life</span>
+    <h1>Version control<br/>for <span class="grad">your life.</span></h1>
+    <p class="lede">Take a snapshot of your life every so often — work, city, relationships, energy, goals. Then <b>diff any two moments</b> and see exactly how you changed. Like a changelog, but the project is you.</p>
+    <div class="cta">
+      <a class="btn brand lg" href="./changelog.html">Try the live demo</a>
+      <a class="btn lg" href="#reveal">See the reveal ↓</a>
+    </div>
+    <div class="subnote">No signup. Runs in your browser. Your history stays on your device.</div>
+  </div>
+</header>
+
+<!-- THE REVEAL -->
+<section id="reveal">
+  <div class="wrap">
+    <div class="eyebrow">The magic moment</div>
+    <h2 class="sec">Two years, side by side.</h2>
+    <p class="sec-lede">This is a real diff between two snapshots in the demo — March 2024 versus May 2026. You don't journal it; you just <i>see</i> it.</p>
+
+    <div class="reveal">
+      <div class="twin">
+        <div class="snapcard">
+          <div class="when">Mar 2024</div>
+          <div class="hl">“New city, new job, everything's unknown.”</div>
+          <div class="kv"><span class="k">City</span><span>Columbus, OH</span></div>
+          <div class="kv"><span class="k">Work</span><span>Junior Analyst @ Fifth Third</span></div>
+          <div class="kv"><span class="k">Status</span><span>Single</span></div>
+          <div class="kv"><span class="k">Energy</span><span>5 / 10</span></div>
+        </div>
+        <div class="snapcard">
+          <div class="when">May 2026</div>
+          <div class="hl">“Engaged, promoted, thriving.”</div>
+          <div class="kv"><span class="k">City</span><span>Chicago, IL</span></div>
+          <div class="kv"><span class="k">Work</span><span>Senior Product Analyst @ Cedar</span></div>
+          <div class="kv"><span class="k">Status</span><span>Engaged to Alex</span></div>
+          <div class="kv"><span class="k">Energy</span><span>8 / 10</span></div>
+        </div>
+      </div>
+
+      <div class="diffbox">
+        <div class="top"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span style="margin-left:6px">diff · Mar 2024 → May 2026</span></div>
+        <div class="diffline"><span class="g c">~</span><span class="lab">City</span><span><span class="o">Columbus, OH</span> <span class="arr">→</span> <span class="n">Chicago, IL</span></span></div>
+        <div class="diffline"><span class="g c">~</span><span class="lab">Work</span><span><span class="o">Junior Analyst</span> <span class="arr">→</span> <span class="n">Senior Product Analyst</span></span></div>
+        <div class="diffline"><span class="g c">~</span><span class="lab">Relationship</span><span><span class="o">Single</span> <span class="arr">→</span> <span class="n">Engaged to Alex</span></span></div>
+        <div class="diffline"><span class="g c">~</span><span class="lab">Energy</span><span class="o">5</span> <span class="arr">→</span> <span class="n">8</span> <span class="up">▲ +3</span></div>
+        <div class="diffline"><span class="g c">~</span><span class="lab">Money</span><span><span class="o">Tight</span> <span class="arr">→</span> <span class="n">Comfortable</span></span></div>
+        <div class="diffline"><span class="g k">✓</span><span class="lab">Completed</span><span class="n">Save $5k</span></div>
+        <div class="diffline"><span class="g a">+</span><span class="lab">New goal</span><span class="n">Run a marathon · Buy a place</span></div>
+        <div class="diffline"><span class="g d">−</span><span class="lab">Inner circle</span><span class="o">Jordan, Pat</span></div>
+        <div class="summ">spanning 2y 2m · 11 changes, 1 unchanged</div>
+      </div>
+    </div>
+
+    <div class="narr">
+      <div class="tag">✨ Narrate this span — written by Claude</div>
+      <p>Over the two years between Columbus and Chicago, you didn't just move cities — you changed altitude. The junior title fell away and a senior one took its place, and the work finally started to feel like yours. Somewhere in there, “Single” became “Engaged to Alex,” your energy climbed from a dragging 5 to a humming 8, and money stopped being a knot in your stomach. You closed the book on a $5k goal and opened a bolder one: a marathon, a place of your own. Jordan and Pat faded; Alex and Sam moved to the center. It reads like the chapter where the pieces finally fell into place.</p>
+    </div>
+    <p class="subnote" style="margin-top:12px">One tap turns any diff into a paragraph. The hosted demo writes it instantly offline; add your own API key for live Claude-written narratives.</p>
+  </div>
+</section>
+
+<!-- HOW -->
+<section id="how">
+  <div class="wrap center">
+    <div class="eyebrow">How it works</div>
+    <h2 class="sec">Three steps. Then time does the rest.</h2>
+    <p class="sec-lede">The whole point is low effort now, high payoff later.</p>
+    <div class="steps" style="text-align:left">
+      <div class="step"><div class="n">1</div><h3>Snapshot</h3><p>Spend two minutes capturing where life is right now — work, city, who you're close to, energy, money, goals, a one-line headline.</p></div>
+      <div class="step"><div class="n">2</div><h3>Live your life</h3><p>Come back every month or few. Each snapshot is a commit — a saved point you can always return to.</p></div>
+      <div class="step"><div class="n">3</div><h3>Diff any two moments</h3><p>Pick a “from” and a “to” and watch the changelog write itself: what changed, by how much, what you finished, what you let go.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow">What's inside</div>
+    <h2 class="sec">A diff engine for being human.</h2>
+    <div class="feat">
+      <div class="fcard"><div class="ic">🔀</div><h3>Any-to-any diffs</h3><p>Compare last month, or you-from-five-years-ago. Numbers show deltas; goals show done / added / dropped.</p></div>
+      <div class="fcard"><div class="ic">✨</div><h3>AI narratives</h3><p>Turn any diff into a warm, readable paragraph. Works offline in the demo; bring your own key for live Claude prose.</p></div>
+      <div class="fcard"><div class="ic">📈</div><h3>Trends</h3><p>Sparklines for mood, energy, and work satisfaction across your whole history.</p></div>
+      <div class="fcard"><div class="ic">💡</div><h3>Smart insights</h3><p>“Energy is up 60% since your first snapshot.” “3 roles in 2 years.” Patterns you'd never notice alone.</p></div>
+      <div class="fcard"><div class="ic">🕓</div><h3>Timeline</h3><p>Every snapshot as a headline you can scan — the table of contents for your years.</p></div>
+      <div class="fcard"><div class="ic">📦</div><h3>Export your repo</h3><p>Your life history is yours. Take it with you anytime.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- MOAT -->
+<section>
+  <div class="wrap">
+    <div class="moat">
+      <h2>The longer you use it, the more irreplaceable it gets.</h2>
+      <p>A journal is a pile of entries. Changelog is structured history you can <i>compute on</i> — and you can't recreate a snapshot of who you were two years ago after the fact. Five years in, your history is something no other app can hand you. That's the whole moat.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap center">
+    <div class="eyebrow">Pricing</div>
+    <h2 class="sec">Start free. The good part costs less than a coffee.</h2>
+    <p class="sec-lede">Free is genuinely useful. Pro unlocks the parts that compound.</p>
+    <div class="tiers" style="text-align:left">
+      <div class="tier">
+        <div class="nm">Free</div>
+        <div class="pr">$0</div>
+        <div class="yr">forever</div>
+        <ul><li>Up to 5 snapshots</li><li>Diff your latest two moments</li><li>Timeline of headlines</li><li>Offline narrative</li></ul>
+        <a class="btn" href="./changelog.html" style="margin-top:auto">Open the app</a>
+      </div>
+      <div class="tier feat2">
+        <div class="badge">Recommended</div>
+        <div class="nm">Pro</div>
+        <div class="pr">$3.99<small>/mo</small></div>
+        <div class="yr">or $24/year — save 50%</div>
+        <ul><li>Compare <b>any</b> two moments</li><li>AI-written narratives</li><li>Trends &amp; sparklines</li><li>Smart life insights</li><li>Snapshot reminders</li><li>Export your life repo</li><li>Unlimited snapshots</li></ul>
+        <a class="btn brand" href="./changelog.html" style="margin-top:auto">Try Pro in the demo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section class="final">
+  <div class="wrap">
+    <h2>Who were you, two years ago?</h2>
+    <p class="sec-lede center" style="margin-bottom:22px">Start the first commit today. Future you will want the history.</p>
+    <a class="btn brand lg" href="./changelog.html">Take your first snapshot →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap row" style="display:flex;width:100%">
+    <div class="logo" style="font-size:15px"><span class="mark" style="width:24px;height:24px;font-size:15px">⌥</span> Changelog</div>
+    <span class="sp"></span>
+    <span>Version control for your life · a demo concept</span>
+  </div>
+</footer>
+
+</body>
+</html>

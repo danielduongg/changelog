@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Changelog — version control for your life</title>
+<style>
+  :root{
+    --bg:#0b0d12; --card:#13161e; --card2:#1a1e29; --line:#262b38;
+    --ink:#e9edf6; --dim:#8b95ad; --faint:#646e87;
+    --accent:#7aa2ff; --accent2:#9d8cff;
+    --add:#5cd6a0; --del:#ff6f87; --chg:#ffc15e; --done:#5cd6a0;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.45}
+  .wrap{max-width:1060px;margin:0 auto;padding:20px 18px 64px}
+
+  header{display:flex;align-items:center;gap:13px;padding:4px 0 18px}
+  .logo{display:flex;align-items:center;gap:11px;font-weight:800;font-size:20px;letter-spacing:-.02em}
+  .logo .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:grid;place-items:center;color:#0a0d16;font-weight:900;font-family:var(--mono);font-size:18px}
+  .logo small{display:block;font-weight:500;font-size:11px;color:var(--dim);letter-spacing:0}
+  header .sp{flex:1}
+  .plan{font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:6px 12px;display:flex;gap:7px;align-items:center}
+  .plan.pro{color:var(--accent2);border-color:rgba(157,140,255,.5)}
+  .btn{font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--line);
+    background:var(--card2);color:var(--ink);border-radius:10px;padding:9px 14px;transition:.15s}
+  .btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .btn.brand{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0a0d16;border:none}
+  .btn.pro{background:linear-gradient(135deg,#7d6bff,#9d8cff);color:#0a0616;border:none}
+  .btn.ghost{background:transparent}
+  .btn.sm{padding:6px 10px;font-size:12px}
+  .iconbtn{font-family:var(--sans);font-size:15px;cursor:pointer;border:1px solid var(--line);background:var(--card2);color:var(--dim);border-radius:10px;padding:8px 11px;transition:.15s}
+  .iconbtn:hover{color:var(--ink);border-color:var(--accent)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .card h2{font-size:14px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .card h2 .sp{flex:1}
+  .pill{font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:999px;text-transform:uppercase}
+  .pill.pro{background:rgba(157,140,255,.16);color:var(--accent2)}
+
+  /* compare hero */
+  .hero{margin-bottom:14px}
+  .cmpbar{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .cmpbar select{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;max-width:230px}
+  .cmpbar .arrow{color:var(--faint)}
+  .cmpbar .locknote{font-size:11px;color:var(--accent2);cursor:pointer}
+  .summary{padding:10px 16px;font-size:12.5px;color:var(--dim);border-bottom:1px solid var(--line)}
+  .summary b{color:var(--ink)}
+
+  /* narrative */
+  .narrate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .nmode{font-size:11px;color:var(--faint)}
+  .nmode b{color:var(--accent2)}
+  .narrative{flex-basis:100%;font-size:14px;line-height:1.62;color:#d9e0ee;white-space:pre-wrap;
+    background:linear-gradient(180deg,rgba(157,140,255,.09),rgba(122,162,255,.04));
+    border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:10px;padding:13px 15px;margin-top:2px;display:none}
+  .narrative.show{display:block}
+  .narrative.loading{color:var(--faint);font-style:italic}
+
+  .diff{font-family:var(--mono);font-size:13px;padding:6px 0}
+  .dgroup{padding:6px 16px}
+  .dgroup .gh{font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:8px 0 4px}
+  .dline{display:flex;gap:9px;padding:3px 0;align-items:baseline}
+  .dline .g{width:12px;flex:none;font-weight:700;text-align:center}
+  .dline.add .g{color:var(--add)} .dline.del .g{color:var(--del)}
+  .dline.chg .g{color:var(--chg)} .dline.done .g{color:var(--done)}
+  .dline .lab{color:var(--dim);min-width:120px;flex:none}
+  @media(max-width:560px){.dline .lab{min-width:84px}}
+  .old{color:var(--del);text-decoration:line-through;opacity:.8}
+  .new{color:var(--add)}
+  .to{color:var(--faint)}
+  .delta{font-weight:700;margin-left:6px}
+  .delta.up{color:var(--add)} .delta.down{color:var(--del)}
+  .unch{padding:8px 16px;color:var(--faint);font-size:12px;cursor:pointer}
+
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  /* timeline */
+  .tl{position:relative}
+  .snap{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);cursor:default}
+  .snap:last-child{border-bottom:none}
+  .snap .when{flex:none;width:74px;font-size:11px;color:var(--faint);font-family:var(--mono);padding-top:2px}
+  .snap .body{flex:1;min-width:0}
+  .snap .hl{font-weight:600}
+  .snap .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+  .chip{font-size:11px;color:var(--dim);background:var(--card2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+  .snap .rb{display:flex;gap:6px;flex:none}
+  .icon{cursor:pointer;border:1px solid var(--line);background:var(--card2);border-radius:8px;width:28px;height:28px;display:grid;place-items:center;color:var(--dim);font-size:13px}
+  .icon:hover{color:var(--ink);border-color:var(--accent)}
+  .addbar{padding:12px 16px;border-top:1px solid var(--line)}
+
+  .trow{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+  .trow:last-child{border-bottom:none}
+  .trow .nm{font-size:13px;flex:1}
+  .trow .val{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .ins{padding:11px 16px;border-bottom:1px solid var(--line);font-size:13px;display:flex;gap:9px;align-items:flex-start}
+  .ins:last-child{border-bottom:none}
+  .ins .b{flex:none;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:6px}
+
+  .lockmsg{padding:22px 16px;text-align:center}
+  .lockmsg .em{font-size:20px}
+  .lockmsg p{color:var(--dim);font-size:13px;margin:6px 0 12px}
+
+  .scrim{position:fixed;inset:0;background:rgba(4,6,10,.74);display:none;align-items:center;justify-content:center;padding:18px;z-index:50;backdrop-filter:blur(3px)}
+  .scrim.show{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;width:100%;max-width:520px;max-height:92vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .modal h3{margin:0;padding:16px 18px;border-bottom:1px solid var(--line);font-size:16px}
+  .mbody{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
+  .sect{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:4px 0 -4px}
+  label{font-size:12px;color:var(--dim);display:block;margin-bottom:5px}
+  input,select,textarea{width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  textarea{resize:vertical;min-height:74px;font-family:var(--mono);font-size:13px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rng{display:flex;align-items:center;gap:10px}
+  .rng input{padding:0}
+  .rng b{font-family:var(--mono);width:26px;text-align:right}
+  .help{font-size:11px;color:var(--faint)}
+  .key-row{display:flex;gap:8px}
+  .note{font-size:11.5px;color:var(--faint);line-height:1.5;margin:0}
+  .note.warn{color:var(--chg)}
+  .modecard{font-size:12px;color:var(--dim);background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .modecard b{color:var(--ink)}
+  .mfoot{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+
+  .tiers{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:6px 0}
+  @media(max-width:520px){.tiers{grid-template-columns:1fr}}
+  .tier{border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:9px}
+  .tier.feat{border-color:var(--accent2);box-shadow:0 0 0 1px var(--accent2) inset}
+  .tier .nm{font-weight:700}.tier .pr{font-size:26px;font-weight:800}.tier .pr small{font-size:13px;color:var(--dim);font-weight:500}
+  .tier ul{margin:4px 0 0;padding-left:18px;color:var(--dim);font-size:12.5px;display:flex;flex-direction:column;gap:5px}
+  .badge{font-size:10px;font-weight:700;color:var(--accent2);letter-spacing:.08em;text-transform:uppercase}
+  .disc{font-size:11px;color:var(--faint);text-align:center;padding-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><span class="mark">⌥</span><span>Changelog<small>version control for your life</small></span></div>
+    <span class="sp"></span>
+    <button id="settingsBtn" class="iconbtn" title="Settings · AI narrative">⚙</button>
+    <span id="planBadge" class="plan">Free</span>
+    <button id="upgradeBtn" class="btn pro">Upgrade to Pro</button>
+  </header>
+
+  <div class="card hero">
+    <div class="cmpbar">
+      <span style="font-size:12px;color:var(--dim)">Compare</span>
+      <select id="fromSel"></select>
+      <span class="arrow">→</span>
+      <select id="toSel"></select>
+      <span class="sp" style="flex:1"></span>
+      <span id="lockNote" class="locknote">🔒 Free compares latest two · unlock any-to-any</span>
+    </div>
+    <div id="summary" class="summary"></div>
+    <div class="narrate" id="narrateWrap">
+      <button id="narrateBtn" class="btn pro sm">✨ Narrate this span</button>
+      <span id="narrateMode" class="nmode"></span>
+      <div id="narrative" class="narrative"></div>
+    </div>
+    <div id="diff" class="diff"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Your snapshots <span class="sp"></span><span id="snapCount" style="font-size:12px;color:var(--dim)"></span></h2>
+      <div id="timeline" class="tl"></div>
+      <div class="addbar"><button id="addBtn" class="btn brand">+ New snapshot</button>
+        <button id="resetBtn" class="btn ghost sm" style="margin-left:8px">Reset demo</button></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <h2>Trends <span class="sp"></span><span class="pill pro">Pro</span></h2>
+        <div id="trends"></div>
+      </div>
+      <div class="card">
+        <h2>Insights <span class="sp"></span><span class="pill pro">Pro</span></h2>
+        <div id="insights"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- snapshot modal -->
+<div class="scrim" id="editScrim">
+  <div class="modal">
+    <h3 id="editTitle">New snapshot</h3>
+    <div class="mbody">
+      <div class="sect">The moment</div>
+      <div class="two">
+        <div><label>Date</label><input id="fDate" type="date"/></div>
+        <div><label>Money feels…</label><select id="fMoney"><option>Tight</option><option selected>OK</option><option>Comfortable</option></select></div>
+      </div>
+      <div><label>Headline — this moment in one line</label><input id="fHeadline" placeholder="Engaged, promoted, thriving."/></div>
+
+      <div class="sect">Place &amp; work</div>
+      <div><label>City</label><input id="fCity" placeholder="Chicago, IL"/></div>
+      <div><label>Work</label><input id="fJob" placeholder="Senior Product Analyst @ Cedar"/></div>
+      <div><label>Work satisfaction</label><div class="rng"><input id="fWork" type="range" min="1" max="10" value="6"/><b id="fWorkV">6</b></div></div>
+
+      <div class="sect">People</div>
+      <div><label>Relationship</label><input id="fRel" placeholder="Single · Dating Alex · Engaged…"/></div>
+      <div><label>Closest to <small class="help">(comma separated)</small></label><input id="fPeople" placeholder="Alex, Sam, Mom"/></div>
+
+      <div class="sect">You</div>
+      <div class="two">
+        <div><label>Energy</label><div class="rng"><input id="fEnergy" type="range" min="1" max="10" value="6"/><b id="fEnergyV">6</b></div></div>
+        <div><label>Mood</label><div class="rng"><input id="fMood" type="range" min="1" max="10" value="6"/><b id="fMoodV">6</b></div></div>
+      </div>
+      <div><label>Who am I right now?</label><input id="fIdentity" placeholder="Building a life"/></div>
+      <div><label>Excited about</label><input id="fExcited" placeholder="Wedding planning"/></div>
+
+      <div class="sect">Goals</div>
+      <div><label>Current goals <small class="help">(one per line · start a line with ✓ to mark it done)</small></label>
+        <textarea id="fGoals" placeholder="Run a marathon&#10;✓ Save $5k&#10;Buy a place"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" data-close>Cancel</button>
+      <button class="btn brand" id="saveSnap">Save snapshot</button>
+    </div>
+  </div>
+</div>
+
+<!-- pricing modal -->
+<div class="scrim" id="priceScrim">
+  <div class="modal" style="max-width:560px">
+    <h3>Upgrade to Changelog Pro</h3>
+    <div class="mbody">
+      <p style="color:var(--dim);font-size:13px;margin:0">Your history is the product — and it compounds. Pro unlocks the parts that get more valuable every year you keep going.</p>
+      <div class="tiers">
+        <div class="tier"><div class="nm">Free</div><div class="pr">$0</div>
+          <ul><li>Up to 5 snapshots</li><li>Diff your latest two</li><li>Timeline</li><li>Offline narrative</li></ul></div>
+        <div class="tier feat"><div class="badge">Recommended</div><div class="nm">Pro</div><div class="pr">$3.99<small>/mo</small></div>
+          <ul><li>Compare <b>any</b> two moments</li><li>AI-written narratives</li><li>Trends &amp; sparklines</li><li>Smart life insights</li><li>Snapshot reminders</li><li>Export your “life repo”</li><li>Unlimited snapshots</li></ul>
+          <button class="btn brand" id="goPro">Unlock Pro (demo)</button></div>
+      </div>
+      <div class="disc">Or $24/yr. Demo unlock applies Pro instantly — no payment, no card.</div>
+    </div>
+    <div class="mfoot"><button class="btn ghost" data-close>Maybe later</button></div>
+  </div>
+</div>
+
+<!-- settings modal -->
+<div class="scrim" id="setScrim">
+  <div class="modal" style="max-width:480px">
+    <h3>Settings · AI narrative</h3>
+    <div class="mbody">
+      <div class="modecard" id="modeCard"></div>
+      <div>
+        <label>Anthropic API key <small class="help">(for live Claude-written narratives)</small></label>
+        <div class="key-row">
+          <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off"/>
+          <button class="btn ghost sm" id="clearKey">Clear</button>
+        </div>
+      </div>
+      <div>
+        <label>Model</label>
+        <select id="modelSel">
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — balanced</option>
+          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — fast &amp; cheap</option>
+          <option value="claude-opus-4-8">Claude Opus 4.8 — best prose</option>
+        </select>
+      </div>
+      <p class="note">🔒 Your key is stored only in this browser (localStorage) and is sent directly to Anthropic — never uploaded to this site or committed to the repo. Leave it blank to use the offline demo narrator.</p>
+      <p class="note warn">⚠ Never hardcode a real key into a public deployment — it will be scraped and abused. Paste it here for local use instead.</p>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" data-close>Close</button>
+      <button class="btn brand" id="saveSettings">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const FREE_LIMIT = 5;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  /* ===========================================================================
+     AI NARRATIVE CONFIG
+     ---------------------------------------------------------------------------
+     The public demo runs in OFFLINE mode when no key is present (no API call,
+     nothing leaves the page). To get real Claude-written narratives, paste your
+     key into Settings ⚙ inside the app — it is stored ONLY in your browser's
+     localStorage and is safe for public deploys.
+
+     You MAY hardcode a key in ANTHROPIC_API_KEY below for LOCAL use only.
+     Never commit a real key to a public repo; it will be scraped within minutes.
+     =========================================================================== */
+  const CONFIG = {
+    ANTHROPIC_API_KEY: "",                 // leave "" for the public demo
+    MODEL: "claude-sonnet-4-6",            // or claude-haiku-4-5-20251001 / claude-opus-4-8
+    MAX_TOKENS: 380
+  };
+  const getKey   = () => { try{ return (localStorage.getItem('changelog.apikey')||CONFIG.ANTHROPIC_API_KEY||'').trim(); }catch(e){ return (CONFIG.ANTHROPIC_API_KEY||'').trim(); } };
+  const getModel = () => { try{ return localStorage.getItem('changelog.model')||CONFIG.MODEL; }catch(e){ return CONFIG.MODEL; } };
+  const narrativeMode = () => getKey() ? 'live' : 'demo';
+
+  const TEXT_FIELDS = [['headline','Headline'],['city','City'],['job','Work'],['rel','Relationship'],['moneyVibe','Money'],['identity','Identity'],['excited','Excited about']];
+  const NUM_FIELDS  = [['workSat','Work satisfaction'],['energy','Energy'],['mood','Mood']];
+
+  /* ---------- pure diff logic (unit-tested) ---------- */
+  function namesDiff(o,n){
+    o=o||[]; n=n||[];
+    const os=new Set(o.map(x=>x.toLowerCase().trim())), ns=new Set(n.map(x=>x.toLowerCase().trim()));
+    return {added:n.filter(x=>!os.has(x.toLowerCase().trim())), removed:o.filter(x=>!ns.has(x.toLowerCase().trim()))};
+  }
+  function goalsDiff(og,ng){
+    og=og||[]; ng=ng||[];
+    const oset=new Set(og.map(g=>g.text.toLowerCase().trim()));
+    const nset=new Set(ng.map(g=>g.text.toLowerCase().trim()));
+    return {
+      completed: ng.filter(g=>g.done).map(g=>g.text),
+      added:     ng.filter(g=>!g.done && !oset.has(g.text.toLowerCase().trim())).map(g=>g.text),
+      dropped:   og.filter(g=>!nset.has(g.text.toLowerCase().trim())).map(g=>g.text),
+      kept:      ng.filter(g=>!g.done && oset.has(g.text.toLowerCase().trim())).map(g=>g.text)
+    };
+  }
+  function compareSnapshots(a,b){
+    const changes=[]; let unchanged=0;
+    for(const [f,lab] of TEXT_FIELDS){
+      const av=(a[f]||'').trim(), bv=(b[f]||'').trim();
+      if(av!==bv) changes.push({kind:'text',field:f,label:lab,old:av,new:bv}); else unchanged++;
+    }
+    for(const [f,lab] of NUM_FIELDS){
+      const av=+a[f]||0, bv=+b[f]||0;
+      if(av!==bv) changes.push({kind:'num',field:f,label:lab,old:av,new:bv,delta:bv-av}); else unchanged++;
+    }
+    const pd=namesDiff(a.closePeople,b.closePeople);
+    if(pd.added.length||pd.removed.length) changes.push({kind:'people',label:'Close to',...pd}); else unchanged++;
+    const gd=goalsDiff(a.goals,b.goals);
+    if(gd.added.length||gd.completed.length||gd.dropped.length) changes.push({kind:'goals',label:'Goals',...gd}); else unchanged++;
+    return {changes, unchanged, areas:changes.length};
+  }
+  function monthsBetween(d1,d2){
+    const a=new Date(d1), b=new Date(d2);
+    return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth());
+  }
+  function humanGap(d1,d2){
+    let m=Math.abs(monthsBetween(d1,d2)); if(m<=0) return 'under a month';
+    const y=Math.floor(m/12); m=m%12;
+    return [y?y+'y':null, m?m+'m':null].filter(Boolean).join(' ') || 'under a month';
+  }
+  function avgCadenceDays(snaps){
+    if(snaps.length<2) return null;
+    const s=[...snaps].sort((a,b)=>a.date<b.date?-1:1);
+    let tot=0; for(let i=1;i<s.length;i++) tot+=(new Date(s[i].date)-new Date(s[i-1].date))/86400000;
+    return Math.round(tot/(s.length-1));
+  }
+  function insights(snaps){
+    if(snaps.length<2) return ['Take at least two snapshots to unlock insights about how you’re changing.'];
+    const s=[...snaps].sort((a,b)=>a.date<b.date?-1:1);
+    const first=s[0], last=s[s.length-1], out=[];
+    const cities=[...new Set(s.map(x=>(x.city||'').trim()).filter(Boolean))];
+    if(cities.length>1) out.push(`You’ve lived in ${cities.length} places on record — now in ${last.city}, up from ${first.city}.`);
+    const jobs=[...new Set(s.map(x=>(x.job||'').trim()).filter(Boolean))];
+    if(jobs.length>1) out.push(`Work moved across ${jobs.length} roles: “${first.job}” → “${last.job}”.`);
+    let best=null;
+    for(const [f,lab] of NUM_FIELDS){
+      const a=+first[f]||0, b=+last[f]||0; if(!a) continue;
+      const pct=Math.round((b-a)/a*100);
+      if(best===null || Math.abs(pct)>Math.abs(best.pct)) best={lab,pct,a,b};
+    }
+    if(best && best.pct!==0) out.push(`${best.lab} is ${best.pct>0?'up':'down'} ${Math.abs(best.pct)}% since your first snapshot (${best.a} → ${best.b}).`);
+    const done=new Set(); s.forEach(x=>(x.goals||[]).forEach(g=>{if(g.done)done.add(g.text.toLowerCase().trim());}));
+    if(done.size) out.push(`You’ve checked off ${done.size} goal${done.size>1?'s':''} across your history. ✓`);
+    const cad=avgCadenceDays(s);
+    if(cad) out.push(`You snapshot about every ${cad>60?Math.round(cad/30)+' months':cad+' days'}. ${cad>120?'Snapshot more often to catch the finer changes.':''}`.trim());
+    return out;
+  }
+  const canAdd = (snaps,isPro) => isPro || snaps.length < FREE_LIMIT;
+
+  /* ---------- narrative: offline narrator + prompt builder (unit-tested) ---------- */
+  const orderPair = (a,b) => a.date<=b.date ? [a,b] : [b,a];
+  function joinNat(arr){
+    arr=arr.filter(Boolean);
+    if(arr.length<=1) return arr.join('');
+    if(arr.length===2) return arr[0]+' and '+arr[1];
+    return arr.slice(0,-1).join(', ')+', and '+arr[arr.length-1];
+  }
+  const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
+  function snapshotToText(s){
+    return [
+      `headline: ${s.headline||'—'}`,
+      `city: ${s.city||'—'}`,
+      `work: ${s.job||'—'} (satisfaction ${s.workSat}/10)`,
+      `relationship: ${s.rel||'—'}`,
+      `close to: ${(s.closePeople||[]).join(', ')||'—'}`,
+      `energy ${s.energy}/10, mood ${s.mood}/10, money feels ${s.moneyVibe||'—'}`,
+      `identity: ${s.identity||'—'}; excited about: ${s.excited||'—'}`,
+      `goals: ${(s.goals||[]).map(g=>g.text+(g.done?' (done)':'')).join('; ')||'—'}`
+    ].join('\n');
+  }
+  function composeDemoNarrative(older,newer){
+    const r=compareSnapshots(older,newer);
+    const span=humanGap(older.date,newer.date);
+    const get=f=>r.changes.find(c=>c.field===f);
+    const sents=[];
+    sents.push(`Over the ${span==='under a month'?'short stretch':span} between ${fmtDate(older.date)} and ${fmtDate(newer.date)}, ${r.areas? 'a lot shifted':'remarkably little changed'}.`);
+    const city=get('city'); if(city) sents.push(`You traded ${city.old||'where you were'} for ${city.new}.`);
+    const job=get('job'), ws=get('workSat');
+    if(job||ws){
+      let w=job?`work moved from ${job.old||'where you started'} to ${job.new}`:'work held steady';
+      if(ws) w+=`, and how you feel about it ${ws.delta>0?'climbed':'slipped'} from ${ws.old} to ${ws.new}`;
+      sents.push(cap(w)+'.');
+    }
+    const rel=get('rel'); if(rel) sents.push(`Your relationship went from ${rel.old||'—'} to ${rel.new}.`);
+    const en=get('energy'), mo=get('mood');
+    if(en||mo){
+      const bits=[]; if(en) bits.push(`energy ${en.old}→${en.new}`); if(mo) bits.push(`mood ${mo.old}→${mo.new}`);
+      sents.push(`Inside, ${joinNat(bits)} — ${((en&&en.delta>0)||(mo&&mo.delta>0))?'you were running warmer':'a cooler season'}.`);
+    }
+    const ppl=r.changes.find(c=>c.kind==='people');
+    if(ppl){
+      const a=ppl.added.length?`${joinNat(ppl.added)} came into your inner circle`:'';
+      const d=ppl.removed.length?`${joinNat(ppl.removed)} drifted out of it`:'';
+      sents.push(cap(joinNat([a,d]))+'.');
+    }
+    const g=r.changes.find(c=>c.kind==='goals');
+    if(g){
+      const parts=[];
+      if(g.completed.length) parts.push(`checked off ${joinNat(g.completed)}`);
+      if(g.added.length) parts.push(`set your sights on ${joinNat(g.added)}`);
+      if(g.dropped.length) parts.push(`let go of ${joinNat(g.dropped)}`);
+      if(parts.length) sents.push(`On goals, you ${joinNat(parts)}.`);
+    }
+    const money=get('moneyVibe'); if(money) sents.push(`Money went from feeling ${money.old} to ${money.new}.`);
+    sents.push(r.areas>=8?'It reads like a chapter where the pieces finally fell into place.':r.areas?'Small moves, but the direction is clear.':'A quiet, steady span.');
+    return sents.join(' ');
+  }
+  function buildNarrativePrompt(older,newer){
+    const r=compareSnapshots(older,newer);
+    const keyChanges=r.changes.map(c=>{
+      if(c.kind==='text') return `- ${c.label}: "${c.old||'—'}" -> "${c.new||'—'}"`;
+      if(c.kind==='num')  return `- ${c.label}: ${c.old} -> ${c.new} (${c.delta>0?'+':''}${c.delta})`;
+      if(c.kind==='people') return `- Close people: added ${c.added.join(', ')||'none'}; lost ${c.removed.join(', ')||'none'}`;
+      if(c.kind==='goals') return `- Goals: completed ${c.completed.join(', ')||'none'}; new ${c.added.join(', ')||'none'}; dropped ${c.dropped.join(', ')||'none'}`;
+      return '';
+    }).filter(Boolean).join('\n');
+    return `Write a warm, perceptive second-person micro-essay (about 90-130 words, ONE paragraph, no bullet points) about how this person's life changed between two snapshots. Be specific and grounded in the data below; notice the throughline. Don't be saccharine.
+
+FROM — ${fmtDate(older.date)}:
+${snapshotToText(older)}
+
+TO — ${fmtDate(newer.date)}:
+${snapshotToText(newer)}
+
+KEY CHANGES (${humanGap(older.date,newer.date)} apart):
+${keyChanges||'(little changed)'}
+
+Paragraph:`;
+  }
+  async function callClaude(prompt){
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':getKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:getModel(),max_tokens:CONFIG.MAX_TOKENS,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){ let m=''; try{ const j=await res.json(); m=(j.error&&j.error.message)||''; }catch(e){} throw new Error('API '+res.status+(m?': '+m:'')); }
+    const data=await res.json();
+    return (data.content && data.content[0] && data.content[0].text || '').trim();
+  }
+
+  /* ---------- state ---------- */
+  let state={snaps:[],pro:false};
+  let fromId=null, toId=null;
+  function load(){
+    try{ const raw=localStorage.getItem('changelog.state');
+      if(raw) state=JSON.parse(raw); else { state={snaps:seed(),pro:false}; save(); }
+    }catch(e){ state={snaps:seed(),pro:false}; }
+  }
+  function save(){ try{ localStorage.setItem('changelog.state',JSON.stringify(state)); }catch(e){} }
+  const uid=()=>Math.random().toString(36).slice(2,9);
+  const sorted=()=>[...state.snaps].sort((a,b)=>a.date<b.date?-1:1);
+
+  function seed(){
+    return [
+      {id:uid(),date:'2024-03-10',headline:"New city, new job, everything's unknown.",city:'Columbus, OH',job:'Junior Analyst @ Fifth Third',workSat:5,rel:'Single',closePeople:['Mom','Jordan','Pat'],energy:5,mood:6,moneyVibe:'Tight',identity:'Still figuring it out',excited:'Weekend hikes',goals:[{text:'Get promoted'},{text:'Run a 5K'},{text:'Save $5k'}]},
+      {id:uid(),date:'2024-11-15',headline:'Found my footing.',city:'Columbus, OH',job:'Analyst @ Fifth Third',workSat:6,rel:'Dating Alex',closePeople:['Mom','Alex','Jordan'],energy:6,mood:7,moneyVibe:'OK',identity:'Getting more settled',excited:'Training for a race',goals:[{text:'Run a 10K'},{text:'Save $5k',done:true},{text:'Cook more'}]},
+      {id:uid(),date:'2025-08-02',headline:'Big move to Chicago.',city:'Chicago, IL',job:'Product Analyst @ Cedar',workSat:8,rel:'Dating Alex',closePeople:['Alex','Sam','Mom'],energy:7,mood:7,moneyVibe:'OK',identity:'Ambitious',excited:'New-city energy',goals:[{text:'Run a half marathon'},{text:'Learn to cook'},{text:'Save $10k'}]},
+      {id:uid(),date:'2026-05-20',headline:'Engaged, promoted, thriving.',city:'Chicago, IL',job:'Senior Product Analyst @ Cedar',workSat:8,rel:'Engaged to Alex',closePeople:['Alex','Sam','Mom'],energy:8,mood:8,moneyVibe:'Comfortable',identity:'Building a life',excited:'Wedding planning',goals:[{text:'Run a marathon'},{text:'Cook 1 new recipe/week'},{text:'Buy a place'}]}
+    ];
+  }
+
+  const fmtDate = d => { const x=new Date(d+'T00:00:00'); return x.toLocaleDateString('en-US',{month:'short',year:'numeric'}); };
+
+  /* ---------- render ---------- */
+  const clearNarr = () => { const o=$('narrative'); o.className='narrative'; o.textContent=''; };
+  function render(){
+    const s=sorted(), pro=state.pro;
+    $('planBadge').textContent = pro?'★ Pro':'Free · '+s.length+'/'+FREE_LIMIT;
+    $('planBadge').className='plan'+(pro?' pro':'');
+    $('upgradeBtn').style.display = pro?'none':'';
+    $('snapCount').textContent = s.length+(pro?'':' / '+FREE_LIMIT);
+    $('lockNote').style.display = pro?'none':'';
+
+    fillPickers(s, pro);
+    renderDiff(s);
+    renderTimeline(s);
+    renderTrends(s, pro);
+    renderInsights(s, pro);
+    renderNarrateMode();
+    clearNarr();
+  }
+
+  function fillPickers(s, pro){
+    const opt = x => `<option value="${x.id}">${fmtDate(x.date)} — ${esc(x.headline||'untitled')}</option>`;
+    const ids=s.map(x=>x.id);
+    if(!ids.includes(fromId)||!ids.includes(toId)||fromId===toId){
+      if(s.length>=2){ fromId=s[s.length-2].id; toId=s[s.length-1].id; }
+      else { fromId=s.length?s[0].id:null; toId=fromId; }
+    }
+    if(!pro && s.length>=2){ fromId=s[s.length-2].id; toId=s[s.length-1].id; }
+    $('fromSel').innerHTML=s.map(opt).join('');
+    $('toSel').innerHTML=s.map(opt).join('');
+    $('fromSel').value=fromId; $('toSel').value=toId;
+    $('fromSel').disabled = !pro; $('toSel').disabled = !pro;
+  }
+
+  const arrowDelta = d => `<span class="delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${d>0?'+':''}${d}</span>`;
+
+  function renderDiff(s){
+    const dEl=$('diff'), sEl=$('summary');
+    if(s.length<2){ sEl.textContent=''; dEl.innerHTML='<div class="unch" style="cursor:default">Add a second snapshot to see your first diff.</div>'; return; }
+    const a=state.snaps.find(x=>x.id===fromId), b=state.snaps.find(x=>x.id===toId);
+    if(!a||!b||a.id===b.id){ sEl.textContent=''; dEl.innerHTML='<div class="unch" style="cursor:default">Pick two different snapshots.</div>'; return; }
+    const [older,newer]=orderPair(a,b);
+    const r=compareSnapshots(older,newer);
+    sEl.innerHTML=`<b>${fmtDate(older.date)}</b> → <b>${fmtDate(newer.date)}</b> · spanning <b>${humanGap(older.date,newer.date)}</b> · <b>${r.areas}</b> change${r.areas!==1?'s':''}, ${r.unchanged} unchanged`;
+
+    let rows='';
+    const textChg=r.changes.filter(c=>c.kind==='text');
+    const numChg=r.changes.filter(c=>c.kind==='num');
+    if(textChg.length||numChg.length){
+      rows+=`<div class="dgroup"><div class="gh">Life &amp; self</div>`;
+      for(const c of textChg) rows+=`<div class="dline chg"><span class="g">~</span><span class="lab">${c.label}</span><span><span class="old">${esc(c.old||'—')}</span> <span class="to">→</span> <span class="new">${esc(c.new||'—')}</span></span></div>`;
+      for(const c of numChg) rows+=`<div class="dline chg"><span class="g">~</span><span class="lab">${c.label}</span><span class="old">${c.old}</span> <span class="to">→</span> <span class="new">${c.new}</span>${arrowDelta(c.delta)}</div>`;
+      rows+=`</div>`;
+    }
+    const ppl=r.changes.find(c=>c.kind==='people');
+    if(ppl){
+      rows+=`<div class="dgroup"><div class="gh">People</div>`;
+      for(const p of ppl.added) rows+=`<div class="dline add"><span class="g">+</span><span class="lab">Close to</span><span class="new">${esc(p)}</span></div>`;
+      for(const p of ppl.removed) rows+=`<div class="dline del"><span class="g">−</span><span class="lab">Close to</span><span class="old">${esc(p)}</span></div>`;
+      rows+=`</div>`;
+    }
+    const g=r.changes.find(c=>c.kind==='goals');
+    if(g){
+      rows+=`<div class="dgroup"><div class="gh">Goals</div>`;
+      for(const x of g.completed) rows+=`<div class="dline done"><span class="g">✓</span><span class="lab">Completed</span><span class="new">${esc(x)}</span></div>`;
+      for(const x of g.added)     rows+=`<div class="dline add"><span class="g">+</span><span class="lab">New goal</span><span class="new">${esc(x)}</span></div>`;
+      for(const x of g.dropped)   rows+=`<div class="dline del"><span class="g">−</span><span class="lab">Dropped</span><span class="old">${esc(x)}</span></div>`;
+      rows+=`</div>`;
+    }
+    if(!r.changes.length) rows=`<div class="unch" style="cursor:default">Nothing changed between these two. Steady as she goes.</div>`;
+    rows+=`<div class="unch">${r.unchanged} field${r.unchanged!==1?'s':''} unchanged</div>`;
+    dEl.innerHTML=rows;
+  }
+
+  function renderTimeline(s){
+    const el=$('timeline');
+    if(!s.length){ el.innerHTML='<div class="unch" style="cursor:default;padding:24px 16px;text-align:center">No snapshots yet. Capture this moment to start your changelog.</div>'; return; }
+    el.innerHTML=[...s].reverse().map(x=>`<div class="snap">
+      <div class="when">${fmtDate(x.date)}</div>
+      <div class="body"><div class="hl">${esc(x.headline||'Untitled')}</div>
+        <div class="chips"><span class="chip">${esc(x.city||'—')}</span><span class="chip">${esc(x.rel||'—')}</span><span class="chip">⚡ ${x.energy}</span><span class="chip">☺ ${x.mood}</span></div>
+      </div>
+      <div class="rb"><div class="icon" data-act="edit" data-id="${x.id}" title="Edit">✎</div><div class="icon" data-act="del" data-id="${x.id}" title="Delete">✕</div></div>
+    </div>`).join('');
+  }
+
+  function sparkline(vals,color){
+    if(vals.length<2) return '';
+    const W=130,H=30,pad=3,min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)||1;
+    const pts=vals.map((v,i)=>{const x=pad+i/(vals.length-1)*(W-2*pad); const y=H-pad-((v-min)/rng)*(H-2*pad); return x.toFixed(1)+','+y.toFixed(1);}).join(' ');
+    const last=vals[vals.length-1], lx=W-pad, ly=H-pad-((last-min)/rng)*(H-2*pad);
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts}"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.6" fill="${color}"/></svg>`;
+  }
+  function renderTrends(s, pro){
+    const el=$('trends');
+    if(!pro){ el.innerHTML=lock('Trends'); return; }
+    if(s.length<2){ el.innerHTML='<div class="unch" style="cursor:default">Need two+ snapshots for trends.</div>'; return; }
+    const colors={workSat:'#7aa2ff',energy:'#5cd6a0',mood:'#ffc15e'};
+    el.innerHTML=NUM_FIELDS.map(([f,lab])=>{
+      const vals=s.map(x=>+x[f]||0); const d=vals[vals.length-1]-vals[0];
+      return `<div class="trow"><span class="nm">${lab}</span>${sparkline(vals,colors[f])}<span class="val">${vals[0]} → ${vals[vals.length-1]} ${d>0?'▲+'+d:d<0?'▼'+d:'='}</span></div>`;
+    }).join('');
+  }
+  function renderInsights(s, pro){
+    const el=$('insights');
+    if(!pro){ el.innerHTML=lock('Insights'); return; }
+    el.innerHTML=insights(s).map(t=>`<div class="ins"><span class="b"></span><span>${esc(t)}</span></div>`).join('');
+  }
+  const lock = what => `<div class="lockmsg"><div class="em">🔒</div><p>${what} are a <b style="color:var(--accent2)">Pro</b> feature.</p><button class="btn pro sm" data-openprice>Unlock Pro</button></div>`;
+
+  /* ---------- narrative UI ---------- */
+  function currentPair(){
+    const s=sorted(); if(s.length<2) return null;
+    const a=state.snaps.find(x=>x.id===fromId), b=state.snaps.find(x=>x.id===toId);
+    if(!a||!b||a.id===b.id) return null;
+    const [older,newer]=orderPair(a,b); return {older,newer};
+  }
+  function renderNarrateMode(){
+    $('narrateMode').innerHTML = narrativeMode()==='live'
+      ? `engine: <b>Claude ${esc(getModel())}</b> (live)`
+      : `engine: <b>offline demo</b> · add a key in ⚙ for AI narratives`;
+  }
+  async function generateNarrative(){
+    const pair=currentPair(), out=$('narrative');
+    if(!pair){ out.className='narrative show'; out.textContent='Pick two different snapshots to narrate.'; return; }
+    const mode=narrativeMode();
+    out.className='narrative show loading';
+    out.textContent = mode==='live' ? 'Writing your story with Claude…' : 'Composing…';
+    if(mode==='demo'){
+      setTimeout(()=>{ out.className='narrative show'; out.textContent=composeDemoNarrative(pair.older,pair.newer); },200);
+      return;
+    }
+    try{
+      const text=await callClaude(buildNarrativePrompt(pair.older,pair.newer));
+      out.className='narrative show'; out.textContent=text||composeDemoNarrative(pair.older,pair.newer);
+    }catch(err){
+      out.className='narrative show';
+      out.textContent=composeDemoNarrative(pair.older,pair.newer)+`\n\n(Live narrative unavailable — ${err.message}. Showing the offline version.)`;
+    }
+  }
+
+  /* ---------- snapshot modal ---------- */
+  let editingId=null;
+  function parseGoals(text){
+    return (text||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+      if(/^(✓|\[x\]|x )/i.test(l)) return {text:l.replace(/^(✓|\[x\]|x )\s*/i,'').trim(),done:true};
+      return {text:l};
+    });
+  }
+  const goalsToText = goals => (goals||[]).map(g=>(g.done?'✓ ':'')+g.text).join('\n');
+  function bindRange(id){ const r=$(id),v=$(id+'V'); r.addEventListener('input',()=>v.textContent=r.value); }
+
+  function openEdit(id){
+    editingId=id||null;
+    const s=id?state.snaps.find(x=>x.id===id):null;
+    $('editTitle').textContent=s?'Edit snapshot':'New snapshot';
+    $('fDate').value=s?s.date:new Date().toISOString().slice(0,10);
+    $('fHeadline').value=s?s.headline||'':''; $('fCity').value=s?s.city||'':''; $('fJob').value=s?s.job||'':'';
+    $('fRel').value=s?s.rel||'':''; $('fPeople').value=s?(s.closePeople||[]).join(', '):'';
+    $('fMoney').value=s?s.moneyVibe||'OK':'OK'; $('fIdentity').value=s?s.identity||'':''; $('fExcited').value=s?s.excited||'':'';
+    $('fWork').value=s?s.workSat||6:6; $('fEnergy').value=s?s.energy||6:6; $('fMood').value=s?s.mood||6:6;
+    $('fWorkV').textContent=$('fWork').value; $('fEnergyV').textContent=$('fEnergy').value; $('fMoodV').textContent=$('fMood').value;
+    $('fGoals').value=s?goalsToText(s.goals):'';
+    $('editScrim').classList.add('show'); setTimeout(()=>$('fHeadline').focus(),30);
+  }
+  function closeModals(){ $('editScrim').classList.remove('show'); $('priceScrim').classList.remove('show'); $('setScrim').classList.remove('show'); }
+  function saveSnap(){
+    const data={
+      date:$('fDate').value||new Date().toISOString().slice(0,10),
+      headline:$('fHeadline').value.trim(), city:$('fCity').value.trim(), job:$('fJob').value.trim(),
+      workSat:+$('fWork').value, rel:$('fRel').value.trim(),
+      closePeople:$('fPeople').value.split(',').map(x=>x.trim()).filter(Boolean),
+      energy:+$('fEnergy').value, mood:+$('fMood').value, moneyVibe:$('fMoney').value,
+      identity:$('fIdentity').value.trim(), excited:$('fExcited').value.trim(),
+      goals:parseGoals($('fGoals').value)
+    };
+    if(editingId){ Object.assign(state.snaps.find(x=>x.id===editingId),data); }
+    else{
+      if(!canAdd(state.snaps,state.pro)){ closeModals(); openPrice(); return; }
+      state.snaps.push({id:uid(),...data}); toId=state.snaps[state.snaps.length-1].id;
+    }
+    save(); render(); closeModals();
+  }
+  function del(id){ state.snaps=state.snaps.filter(x=>x.id!==id); save(); render(); }
+  const openPrice=()=>$('priceScrim').classList.add('show');
+  function goPro(){ state.pro=true; save(); render(); closeModals(); }
+
+  /* ---------- settings ---------- */
+  function openSettings(){
+    $('apiKey').value=(()=>{try{return localStorage.getItem('changelog.apikey')||'';}catch(e){return '';}})();
+    $('modelSel').value=getModel();
+    $('modeCard').innerHTML = narrativeMode()==='live'
+      ? `Current mode: <b>Live</b> — narratives are written by <b>Claude ${esc(getModel())}</b> using your key.`
+      : `Current mode: <b>Offline demo</b> — narratives are generated locally, no API call. Add your key to switch to live Claude writing.`;
+    $('setScrim').classList.add('show');
+  }
+  function saveSettings(){
+    const k=$('apiKey').value.trim();
+    try{
+      if(k) localStorage.setItem('changelog.apikey',k); else localStorage.removeItem('changelog.apikey');
+      localStorage.setItem('changelog.model',$('modelSel').value);
+    }catch(e){}
+    renderNarrateMode(); clearNarr(); closeModals();
+  }
+  const clearKey=()=>{ $('apiKey').value=''; };
+
+  /* ---------- events ---------- */
+  function bind(){
+    $('addBtn').onclick=()=> canAdd(state.snaps,state.pro)?openEdit(null):openPrice();
+    $('resetBtn').onclick=()=>{ if(confirm('Reset to demo data?')){ state={snaps:seed(),pro:false}; fromId=toId=null; save(); render(); } };
+    $('upgradeBtn').onclick=openPrice;
+    $('saveSnap').onclick=saveSnap;
+    $('goPro').onclick=goPro;
+    $('lockNote').onclick=openPrice;
+    $('settingsBtn').onclick=openSettings;
+    $('saveSettings').onclick=saveSettings;
+    $('clearKey').onclick=clearKey;
+    $('narrateBtn').onclick=generateNarrative;
+    $('fromSel').onchange=e=>{ fromId=e.target.value; renderDiff(sorted()); clearNarr(); };
+    $('toSel').onchange=e=>{ toId=e.target.value; renderDiff(sorted()); clearNarr(); };
+    ['fWork','fEnergy','fMood'].forEach(bindRange);
+    document.addEventListener('click',e=>{
+      const t=e.target;
+      if(t.dataset&&t.dataset.close!==undefined) closeModals();
+      if(t.dataset&&t.dataset.openprice!==undefined) openPrice();
+      const act=t.dataset&&t.dataset.act;
+      if(act==='edit') openEdit(t.dataset.id);
+      if(act==='del') del(t.dataset.id);
+      if(t.classList&&t.classList.contains('scrim')) closeModals();
+    });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModals(); });
+  }
+
+  /* ---------- boot ---------- */
+  load(); bind(); render();
+  try{ globalThis.ChangelogAPI={compareSnapshots,namesDiff,goalsDiff,insights,humanGap,monthsBetween,avgCadenceDays,canAdd,FREE_LIMIT,
+    composeDemoNarrative,buildNarrativePrompt,snapshotToText,joinNat,narrativeMode}; }catch(e){}
+})();
+</script>
+</body>
+</html>
