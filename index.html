@@ -124,6 +124,20 @@
   .final h2{font-size:34px;letter-spacing:-.02em;margin:0 0 14px}
   footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--faint);font-size:12.5px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
   footer .sp{flex:1}
+  /* ---------- UX / UI polish ---------- */
+  .reveal-on.in{animation:revealUp .6s cubic-bezier(.2,.8,.3,1) both}
+  @keyframes revealUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  .fcard,.step,.tier,.snapcard{transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+  .fcard:hover,.step:hover,.snapcard:hover{transform:translateY(-5px);border-color:var(--accent);box-shadow:0 14px 36px rgba(0,0,0,.35)}
+  .tier:hover{transform:translateY(-5px);box-shadow:0 16px 40px rgba(0,0,0,.4)}
+  .btn{transition:.15s,transform .07s}
+  .btn:active{transform:scale(.97)}
+  .btn.brand{position:relative;overflow:hidden}
+  .btn.brand::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 35%,rgba(255,255,255,.4),transparent 65%);transform:translateX(-130%);transition:transform .6s}
+  .btn.brand:hover::after{transform:translateX(130%)}
+  .hero h1 .grad{background-size:220% auto;animation:shine 7s linear infinite}
+  @keyframes shine{to{background-position:220% center}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal-on{opacity:1!important}}
 </style>
 </head>
 <body>
@@ -284,5 +298,20 @@
   </div>
 </footer>
 
+<script>
+  (function(){
+    var sel='.eyebrow, h2.sec, .sec-lede, .snapcard, .diffbox, .narr, .step, .fcard, .tier, .moat, .final h2';
+    var els=[].slice.call(document.querySelectorAll(sel));
+    els.forEach(function(el){ el.classList.add('reveal-on'); });
+    document.querySelectorAll('.steps, .feat, .tiers').forEach(function(g){
+      [].slice.call(g.children).forEach(function(c,i){ c.style.animationDelay=(i*80)+'ms'; });
+    });
+    if(!('IntersectionObserver' in window)){ els.forEach(function(el){el.classList.add('in');}); return; }
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    },{threshold:.12, rootMargin:'0px 0px -8% 0px'});
+    els.forEach(function(el){ io.observe(el); });
+  })();
+</script>
 </body>
 </html>
