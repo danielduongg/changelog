@@ -178,6 +178,8 @@
   #toast .ic{font-size:16px}
   #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:150;display:none}
   .pro{font-size:9px;font-weight:800;letter-spacing:.08em;color:#0c0814;background:linear-gradient(135deg,var(--gold),#ff9f6e);padding:2px 6px;border-radius:5px;text-transform:uppercase}
+  .planpill{font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--glass)}
+  .planpill.pro2{color:#16071f;background:linear-gradient(135deg,var(--gold),#ff9f6e);border-color:transparent}
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -199,7 +201,10 @@
         <div class="ringtxt"><b id="ringPct">0%</b><span>manifested</span></div>
       </div>
       <div class="actions">
+        <span id="planPill" class="planpill">Free</span>
+        <button id="exportBtn" class="btn iconbtn" title="Export board">⤓</button>
         <button id="presentBtn" class="btn iconbtn" title="Present mode">▶</button>
+        <button id="upgradeBtn" class="btn iconbtn" style="border-color:rgba(255,210,122,.5);color:var(--gold)" title="Upgrade to Pro">★ Pro</button>
         <button id="addBtn" class="btn brand2">＋ New vision</button>
       </div>
     </div>
@@ -219,7 +224,7 @@
           <label class="fl">Category</label>
           <div class="catgrid" id="catGrid"></div>
         </div>
-        <div><label class="fl">Picture it <span class="help">(upload a photo, or leave blank for generated art)</span></label>
+        <div><label class="fl">Picture it <span class="help">(upload a photo <b style="color:var(--gold)">Pro</b> · or leave blank for generated art)</span></label>
           <div class="imgpick">
             <div class="imgprev" id="imgPrev">🌅</div>
             <div style="display:flex;flex-direction:column;gap:8px">
@@ -251,6 +256,30 @@
     <div class="lb" id="lbInner"></div>
   </div>
 
+  <!-- pricing -->
+  <div class="scrim" id="priceScrim">
+    <div class="modal" style="max-width:600px">
+      <h3>Unlock Vision Pro</h3>
+      <div class="mbody">
+        <p style="font-size:13px;color:var(--dim);margin:0">Dream without limits. Pro makes the board truly yours — your photos, your ritual, your record.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="border:1px solid var(--line);border-radius:14px;padding:16px">
+            <div style="font-weight:700">Free</div><div style="font-size:30px;font-weight:800;margin:4px 0">$0</div>
+            <ul style="margin:6px 0 0;padding-left:18px;color:var(--dim);font-size:13px;line-height:1.7"><li>Up to 12 visions</li><li>Every category</li><li>Generated art</li><li>Milestones &amp; progress</li></ul>
+          </div>
+          <div style="border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent) inset;border-radius:14px;padding:16px">
+            <span class="pro">Most loved</span>
+            <div style="font-weight:700;margin-top:8px">Pro</div><div style="font-size:30px;font-weight:800;margin:4px 0">$4.99<span style="font-size:13px;color:var(--dim);font-weight:500">/mo</span></div>
+            <ul style="margin:6px 0 0;padding-left:18px;color:var(--dim);font-size:13px;line-height:1.7"><li>Unlimited visions</li><li>Your own photos</li><li>Present / ritual mode</li><li>Export your board</li><li>AI vision art (soon)</li></ul>
+            <button class="btn brand2" id="goProBtn" style="width:100%;justify-content:center;margin-top:12px">Unlock Pro (demo)</button>
+          </div>
+        </div>
+        <div class="help" style="text-align:center">Or $39/yr · demo unlock applies instantly — no payment, no card.</div>
+      </div>
+      <div class="mfoot"><button class="btn ghost" data-close>Maybe later</button></div>
+    </div>
+  </div>
+
   <!-- present mode -->
   <div class="present" id="present">
     <span class="pexit" id="pExit">✕ exit</span>
@@ -275,7 +304,10 @@
     Health:{c:['#a3e635','#16a34a'],e:'🌿'}, Travel:{c:['#fb923c','#ec4899'],e:'🏝️'},
     Love:{c:['#fb7185','#e11d48'],e:'💞'}, Growth:{c:['#a78bfa','#d946ef'],e:'🌱'},
     Home:{c:['#fbbf24','#f97316'],e:'🏡'}, Adventure:{c:['#22d3ee','#3b82f6'],e:'⛰️'},
-    Creativity:{c:['#e879f9','#a855f7'],e:'🎨'}
+    Creativity:{c:['#e879f9','#a855f7'],e:'🎨'},
+    Faith:{c:['#c4b5fd','#7c3aed'],e:'🙏'}, Family:{c:['#fca5a5','#f59e0b'],e:'👪'},
+    Friendship:{c:['#5eead4','#0891b2'],e:'🫂'}, Mindfulness:{c:['#99f6e4','#818cf8'],e:'🧘'},
+    Learning:{c:['#93c5fd','#6366f1'],e:'📖'}, Service:{c:['#fdba74','#fb7185'],e:'🤲'}
   };
   const CATLIST = Object.keys(CATS);
   const AFFIRMATIONS = [
@@ -301,7 +333,8 @@
     if(!visions.length) return 0;
     return Math.round(visions.reduce((s,v)=>s+visionProgress(v),0) / visions.length);
   }
-  const canAdd = (visions,isPro) => true; // joy is not gated in the demo
+  const FREE_LIMIT = 12;
+  const canAdd = (visions,isPro) => isPro || visions.length < FREE_LIMIT;
 
   /* ---------- UX helpers ---------- */
   let _toastT=null;
@@ -329,12 +362,12 @@
   }
 
   /* ---------- state ---------- */
-  let state={visions:[],northStar:'',filter:'All'};
+  let state={visions:[],northStar:'',filter:'All',pro:false};
   const uid=()=>Math.random().toString(36).slice(2,9);
   function load(){
     try{ const raw=localStorage.getItem('vision.state');
-      if(raw) state=JSON.parse(raw); else { state={visions:seed(),northStar:"Live a brave, beautiful, well-lived life.",filter:'All'}; save(); }
-    }catch(e){ state={visions:seed(),northStar:"Live a brave, beautiful, well-lived life.",filter:'All'}; }
+      if(raw) state=JSON.parse(raw); else { state={visions:seed(),northStar:"Live a brave, beautiful, well-lived life.",filter:'All',pro:false}; save(); }
+    }catch(e){ state={visions:seed(),northStar:"Live a brave, beautiful, well-lived life.",filter:'All',pro:false}; }
     if(!state.filter) state.filter='All';
   }
   function save(){ try{ localStorage.setItem('vision.state',JSON.stringify(state)); }catch(e){} }
@@ -348,7 +381,9 @@
       {id:uid(),title:'Build a $25k safety net',category:'Wealth',img:'',emoji:'💎',target:'2027',affirmation:'Abundance flows to me with ease.',progress:60,milestones:[],rot:rot()},
       {id:uid(),title:'Finish writing my novel',category:'Creativity',img:'',emoji:'✍️',target:'2028',affirmation:'I trust my own voice.',progress:25,milestones:[],rot:rot()},
       {id:uid(),title:'A deep, easy partnership',category:'Love',img:'',emoji:'💞',target:'',affirmation:'I am worthy of a great love.',progress:35,milestones:[],rot:rot()},
-      {id:uid(),title:'Read 24 books this year',category:'Growth',img:'',emoji:'📚',target:'2026',affirmation:'I am always becoming.',progress:0,milestones:[{text:'Q1 — 6 books',done:true},{text:'Q2 — 6 books',done:true},{text:'Q3 — 6 books',done:false},{text:'Q4 — 6 books',done:false}],rot:rot()}
+      {id:uid(),title:'Read 24 books this year',category:'Growth',img:'',emoji:'📚',target:'2026',affirmation:'I am always becoming.',progress:0,milestones:[{text:'Q1 — 6 books',done:true},{text:'Q2 — 6 books',done:true},{text:'Q3 — 6 books',done:false},{text:'Q4 — 6 books',done:false}],rot:rot()},
+      {id:uid(),title:'Grow a steady prayer & meditation practice',category:'Faith',img:'',emoji:'🙏',target:'',affirmation:'I am held by something greater than me.',progress:30,milestones:[],rot:rot()},
+      {id:uid(),title:'Sunday dinners everyone shows up for',category:'Family',img:'',emoji:'👪',target:'',affirmation:'My family is close, warm, and whole.',progress:40,milestones:[],rot:rot()}
     ];
   }
 
@@ -395,7 +430,8 @@
     $('board').innerHTML = list.map(cardHTML).join('') +
       `<div class="addcard" id="addCard"><span class="plus">＋</span><span>Add a vision</span></div>`;
   }
-  function renderAll(){ $('northStar').value=state.northStar||''; renderRing(); renderFilters(); renderBoard(); }
+  function renderPlan(){ const p=$('planPill'); if(p){ p.textContent=state.pro?'★ Pro':'Free'; p.classList.toggle('pro2',!!state.pro); } const u=$('upgradeBtn'); if(u) u.style.display=state.pro?'none':''; }
+  function renderAll(){ $('northStar').value=state.northStar||''; renderRing(); renderFilters(); renderBoard(); renderPlan(); }
 
   /* ---------- affirmation rotation ---------- */
   let affIdx=0;
@@ -429,7 +465,7 @@
     $('delBtn').style.display=v?'':'none';
     $('editScrim').classList.add('show'); setTimeout(()=>$('vTitle').focus(),40);
   }
-  function closeAll(){ $('editScrim').classList.remove('show'); $('lbScrim').classList.remove('show'); }
+  function closeAll(){ $('editScrim').classList.remove('show'); $('lbScrim').classList.remove('show'); $('priceScrim').classList.remove('show'); }
   function saveVision(){
     const title=$('vTitle').value.trim(); if(!title){ $('vTitle').focus(); return; }
     const ms=parseMs($('vMs').value);
@@ -437,11 +473,20 @@
       target:$('vTarget').value.trim(),affirmation:$('vAffirm').value.trim(),progress:+$('vProgress').value,milestones:ms};
     if(editingId){ const v=state.visions.find(x=>x.id===editingId); const wasDone=visionProgress(v)>=100; Object.assign(v,data);
       save(); renderAll(); closeAll(); if(!wasDone && visionProgress(v)>=100) celebrate(v); else toast('Vision updated'); }
-    else { const v={id:uid(),...data,emoji:CATS[formCat].e,rot:rot()}; state.visions.unshift(v); save(); renderAll(); closeAll(); toast('Pinned to your board ✦','✦'); confettiSoft(); }
+    else { if(!canAdd(state.visions,state.pro)){ closeAll(); return openPrice(); } const v={id:uid(),...data,emoji:CATS[formCat].e,rot:rot()}; state.visions.unshift(v); save(); renderAll(); closeAll(); toast('Pinned to your board ✦','✦'); confettiSoft(); }
   }
   function delVision(){ if(editingId){ state.visions=state.visions.filter(x=>x.id!==editingId); save(); renderAll(); closeAll(); toast('Vision removed'); } }
   function confettiSoft(){ if(!_reduced()) confetti(); }
   function celebrate(v){ confetti(); toast(v.affirmation?('Manifested — “'+v.affirmation+'”'):'A vision came true ✦','🎉'); }
+  function openPrice(){ $('priceScrim').classList.add('show'); }
+  function goPro(){ state.pro=true; save(); renderPlan(); renderBoard(); closeAll(); confetti(); toast('Pro unlocked — dream without limits ✦','✦'); }
+  function exportBoard(){
+    if(!state.pro) return openPrice();
+    const data=JSON.stringify({northStar:state.northStar,visions:state.visions},null,2);
+    const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='my-vision-board.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500); toast('Board exported ⤓','⤓');
+  }
 
   /* ---------- lightbox ---------- */
   let lbId=null;
@@ -497,6 +542,7 @@
   /* ---------- present mode ---------- */
   let presIdx=0, presT=null;
   function startPresent(){
+    if(!state.pro) return openPrice();
     if(!state.visions.length) return;
     presIdx=0; $('present').classList.add('show'); showPres(); clearInterval(presT);
     if(!_reduced()) presT=setInterval(nextPres,5200);
@@ -516,21 +562,23 @@
 
   /* ---------- events ---------- */
   function bind(){
-    $('addBtn').onclick=()=>openEdit(null);
+    $('addBtn').onclick=()=> canAdd(state.visions,state.pro)?openEdit(null):openPrice();
     $('presentBtn').onclick=startPresent;
+    $('upgradeBtn').onclick=openPrice; $('goProBtn').onclick=goPro; $('exportBtn').onclick=exportBoard;
     $('saveBtn').onclick=saveVision;
     $('delBtn').onclick=delVision;
     $('northStar').addEventListener('change',e=>{ state.northStar=e.target.value; save(); toast('North star set ★','★'); });
     $('vProgress').addEventListener('input',e=>$('vProgressV').textContent=e.target.value+'%');
     $('imgClear').onclick=()=>{ formImg=''; $('imgFile').value=''; paintPreview(); };
     $('imgFile').addEventListener('change',e=>{
+      if(!state.pro){ e.target.value=''; openPrice(); return; }
       const f=e.target.files&&e.target.files[0]; if(!f)return;
       const r=new FileReader(); r.onload=()=>{ formImg=r.result; paintPreview(); }; r.readAsDataURL(f);
     });
     $('catGrid').addEventListener('click',e=>{ const o=e.target.closest('.catopt'); if(!o)return; formCat=o.dataset.cat; paintCatGrid(); paintPreview(); });
     $('filters').addEventListener('click',e=>{ const ch=e.target.closest('.chip'); if(!ch)return; state.filter=ch.dataset.cat; save(); renderFilters(); renderBoard(); });
     $('board').addEventListener('click',e=>{
-      if(e.target.closest('#addCard')) return openEdit(null);
+      if(e.target.closest('#addCard')) return canAdd(state.visions,state.pro)?openEdit(null):openPrice();
       const c=e.target.closest('.vcard'); if(c) openLightbox(c.dataset.id);
     });
     $('lbScrim').addEventListener('click',e=>{
@@ -540,7 +588,7 @@
       if(t.id==='lbComplete') return completeFromLb();
       const ms=t.closest('[data-ms]'); if(ms) return toggleMs(+ms.dataset.ms);
     });
-    document.addEventListener('click',e=>{ if(e.target.dataset&&e.target.dataset.close!==undefined) closeAll(); if(e.target.classList&&e.target.classList.contains('scrim')&&e.target.id==='editScrim') closeAll(); });
+    document.addEventListener('click',e=>{ if(e.target.dataset&&e.target.dataset.close!==undefined) closeAll(); if(e.target.classList&&e.target.classList.contains('scrim')&&(e.target.id==='editScrim'||e.target.id==='priceScrim')) closeAll(); });
     $('present').addEventListener('click',e=>{ if(e.target.id==='pExit') return exitPresent(); nextPres(); });
     document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeAll(); exitPresent(); } });
     bindDrag();
@@ -548,7 +596,7 @@
 
   /* ---------- boot ---------- */
   load(); bind(); renderAll(); rotateAffirm(); setInterval(rotateAffirm, 7000);
-  try{ globalThis.VisionAPI={catPalette,visionProgress,overallProgress,canAdd,seed,parseMs,CATLIST}; }catch(e){}
+  try{ globalThis.VisionAPI={catPalette,visionProgress,overallProgress,canAdd,seed,parseMs,CATLIST,FREE_LIMIT}; }catch(e){}
 })();
 </script>
 </body>

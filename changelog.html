@@ -208,6 +208,7 @@
       <h2>Your snapshots <span class="sp"></span><span id="snapCount" style="font-size:12px;color:var(--dim)"></span></h2>
       <div id="timeline" class="tl"></div>
       <div class="addbar"><button id="addBtn" class="btn brand">+ New snapshot</button>
+        <button id="exportBtn" class="btn ghost sm" style="margin-left:8px">⤓ Export</button>
         <button id="resetBtn" class="btn ghost sm" style="margin-left:8px">Reset demo</button></div>
     </div>
 
@@ -686,6 +687,7 @@ Paragraph:`;
     const [older,newer]=orderPair(a,b); return {older,newer};
   }
   function renderNarrateMode(){
+    if(!state.pro){ $('narrateMode').innerHTML = `<b style="color:var(--accent2)">Pro</b> · AI narratives — turn any diff into a paragraph`; return; }
     $('narrateMode').innerHTML = narrativeMode()==='live'
       ? `engine: <b>Claude ${esc(getModel())}</b> (live)`
       : `engine: <b>offline demo</b> · add a key in ⚙ for AI narratives`;
@@ -693,6 +695,7 @@ Paragraph:`;
   async function generateNarrative(){
     const pair=currentPair(), out=$('narrative');
     if(!pair){ out.className='narrative show'; out.textContent='Pick two different snapshots to narrate.'; return; }
+    if(!state.pro){ openPrice(); return; }
     const mode=narrativeMode();
     out.className='narrative show loading';
     out.textContent = mode==='live' ? 'Writing your story with Claude…' : 'Composing…';
@@ -754,6 +757,19 @@ Paragraph:`;
   function del(id){ state.snaps=state.snaps.filter(x=>x.id!==id); save(); render(); toast('Snapshot removed'); }
   const openPrice=()=>$('priceScrim').classList.add('show');
   function goPro(){ state.pro=true; save(); render(); closeModals(); confetti(); toast('Pro unlocked — your full history awaits'); }
+  function exportSnapshots(){
+    if(!state.pro) return openPrice();
+    const data=JSON.stringify({exported:new Date().toISOString(),snapshots:state.snaps},null,2);
+    const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='changelog-history.json'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500); toast('History exported');
+  }
+  function maybeRemind(){
+    if(!state.pro || !state.snaps.length) return;
+    const arr=sorted(); const latest=arr[arr.length-1];
+    const days=Math.floor((Date.now()-new Date(latest.date+'T00:00:00'))/86400000);
+    if(days>=21) setTimeout(()=>toast("It's been "+days+" days since your last snapshot — capture this moment?"),900);
+  }
 
   /* ---------- settings ---------- */
   function openSettings(){
@@ -786,6 +802,7 @@ Paragraph:`;
     $('saveSettings').onclick=saveSettings;
     $('clearKey').onclick=clearKey;
     $('narrateBtn').onclick=generateNarrative;
+    $('exportBtn').onclick=exportSnapshots;
     $('fromSel').onchange=e=>{ fromId=e.target.value; renderDiff(sorted()); clearNarr(); };
     $('toSel').onchange=e=>{ toId=e.target.value; renderDiff(sorted()); clearNarr(); };
     ['fWork','fEnergy','fMood'].forEach(bindRange);
@@ -802,7 +819,7 @@ Paragraph:`;
   }
 
   /* ---------- boot ---------- */
-  load(); bind(); render();
+  load(); bind(); render(); maybeRemind();
   try{ globalThis.ChangelogAPI={compareSnapshots,namesDiff,goalsDiff,insights,humanGap,monthsBetween,avgCadenceDays,canAdd,FREE_LIMIT,
     composeDemoNarrative,buildNarrativePrompt,snapshotToText,joinNat,narrativeMode}; }catch(e){}
 })();
