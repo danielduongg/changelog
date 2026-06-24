@@ -345,6 +345,15 @@
   const getModel = () => { try{ return localStorage.getItem('changelog.model')||CONFIG.MODEL; }catch(e){ return CONFIG.MODEL; } };
   const narrativeMode = () => getKey() ? 'live' : 'demo';
 
+  /* ---------- Stripe billing (Payment Links — see STRIPE_SETUP.md) ----------
+     Public, safe-to-commit Payment Link URLs. Set each link's post-payment redirect to:
+        https://danielduongg.github.io/changelog/changelog.html?upgraded=1
+     Blank = demo unlock. NEVER put a Stripe SECRET key here. */
+  const STRIPE = { MONTHLY: "", YEARLY: "" };
+  function startCheckout(plan){ const link=(plan==='yearly'?STRIPE.YEARLY:STRIPE.MONTHLY)||STRIPE.MONTHLY; if(link){ window.location.href=link; return true; } return false; }
+  function upgrade(plan){ if(!startCheckout(plan)) goPro(); }
+  function checkReturnUpgrade(){ try{ const q=new URLSearchParams(location.search); if(q.get('upgraded')==='1'){ state.pro=true; save(); history.replaceState(null,'',location.pathname); render(); confetti(); toast('Welcome to Pro — your subscription is active'); } }catch(e){} }
+
   /* ---------- UX helpers: toast / typewriter / confetti ---------- */
   const _reduced = () => (typeof window!=='undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   let _toastT=null;
@@ -755,7 +764,7 @@ Paragraph:`;
     save(); render(); closeModals(); toast(editingId?'Snapshot updated':'Snapshot saved');
   }
   function del(id){ state.snaps=state.snaps.filter(x=>x.id!==id); save(); render(); toast('Snapshot removed'); }
-  const openPrice=()=>$('priceScrim').classList.add('show');
+  const openPrice=()=>{ var b=$('goPro'); if(b) b.textContent=STRIPE.MONTHLY?'Subscribe — $3.99/mo':'Unlock Pro (demo)'; $('priceScrim').classList.add('show'); };
   function goPro(){ state.pro=true; save(); render(); closeModals(); confetti(); toast('Pro unlocked — your full history awaits'); }
   function exportSnapshots(){
     if(!state.pro) return openPrice();
@@ -796,7 +805,7 @@ Paragraph:`;
     $('resetBtn').onclick=()=>{ if(confirm('Reset to demo data?')){ state={snaps:seed(),pro:false}; fromId=toId=null; save(); render(); } };
     $('upgradeBtn').onclick=openPrice;
     $('saveSnap').onclick=saveSnap;
-    $('goPro').onclick=goPro;
+    $('goPro').onclick=()=>upgrade('monthly');
     $('lockNote').onclick=openPrice;
     $('settingsBtn').onclick=openSettings;
     $('saveSettings').onclick=saveSettings;
@@ -819,7 +828,7 @@ Paragraph:`;
   }
 
   /* ---------- boot ---------- */
-  load(); bind(); render(); maybeRemind();
+  load(); bind(); render(); checkReturnUpgrade(); maybeRemind();
   try{ globalThis.ChangelogAPI={compareSnapshots,namesDiff,goalsDiff,insights,humanGap,monthsBetween,avgCadenceDays,canAdd,FREE_LIMIT,
     composeDemoNarrative,buildNarrativePrompt,snapshotToText,joinNat,narrativeMode}; }catch(e){}
 })();

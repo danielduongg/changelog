@@ -299,6 +299,16 @@
   const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const _reduced = () => (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+  /* ---------- Stripe billing (Payment Links — see STRIPE_SETUP.md) ----------
+     Paste your Stripe Payment Link URLs below (Dashboard → Payment Links).
+     These are PUBLIC and safe to commit. Set each link's post-payment redirect to:
+        https://danielduongg.github.io/changelog/vision.html?upgraded=1
+     Leave blank to keep the instant demo unlock. NEVER put a Stripe SECRET key here. */
+  const STRIPE = { MONTHLY: "", YEARLY: "" };
+  function startCheckout(plan){ const link=(plan==='yearly'?STRIPE.YEARLY:STRIPE.MONTHLY)||STRIPE.MONTHLY; if(link){ window.location.href=link; return true; } return false; }
+  function upgrade(plan){ if(!startCheckout(plan)) goPro(); }
+  function checkReturnUpgrade(){ try{ const q=new URLSearchParams(location.search); if(q.get('upgraded')==='1'){ state.pro=true; save(); history.replaceState(null,'',location.pathname); renderPlan(); renderBoard(); confetti(); toast('Welcome to Pro — your subscription is active ✦','✦'); } }catch(e){} }
+
   const CATS = {
     Career:{c:['#6a8bff','#3b5bdb'],e:'💼'}, Wealth:{c:['#34d399','#0d9488'],e:'💎'},
     Health:{c:['#a3e635','#16a34a'],e:'🌿'}, Travel:{c:['#fb923c','#ec4899'],e:'🏝️'},
@@ -478,7 +488,7 @@
   function delVision(){ if(editingId){ state.visions=state.visions.filter(x=>x.id!==editingId); save(); renderAll(); closeAll(); toast('Vision removed'); } }
   function confettiSoft(){ if(!_reduced()) confetti(); }
   function celebrate(v){ confetti(); toast(v.affirmation?('Manifested — “'+v.affirmation+'”'):'A vision came true ✦','🎉'); }
-  function openPrice(){ $('priceScrim').classList.add('show'); }
+  function openPrice(){ var b=$('goProBtn'); if(b) b.textContent=STRIPE.MONTHLY?'Subscribe — $4.99/mo':'Unlock Pro (demo)'; $('priceScrim').classList.add('show'); }
   function goPro(){ state.pro=true; save(); renderPlan(); renderBoard(); closeAll(); confetti(); toast('Pro unlocked — dream without limits ✦','✦'); }
   function exportBoard(){
     if(!state.pro) return openPrice();
@@ -564,7 +574,7 @@
   function bind(){
     $('addBtn').onclick=()=> canAdd(state.visions,state.pro)?openEdit(null):openPrice();
     $('presentBtn').onclick=startPresent;
-    $('upgradeBtn').onclick=openPrice; $('goProBtn').onclick=goPro; $('exportBtn').onclick=exportBoard;
+    $('upgradeBtn').onclick=openPrice; $('goProBtn').onclick=()=>upgrade('monthly'); $('exportBtn').onclick=exportBoard;
     $('saveBtn').onclick=saveVision;
     $('delBtn').onclick=delVision;
     $('northStar').addEventListener('change',e=>{ state.northStar=e.target.value; save(); toast('North star set ★','★'); });
@@ -595,7 +605,7 @@
   }
 
   /* ---------- boot ---------- */
-  load(); bind(); renderAll(); rotateAffirm(); setInterval(rotateAffirm, 7000);
+  load(); bind(); renderAll(); checkReturnUpgrade(); rotateAffirm(); setInterval(rotateAffirm, 7000);
   try{ globalThis.VisionAPI={catPalette,visionProgress,overallProgress,canAdd,seed,parseMs,CATLIST,FREE_LIMIT}; }catch(e){}
 })();
 </script>
